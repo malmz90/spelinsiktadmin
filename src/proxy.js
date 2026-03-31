@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 const PROTECTED_PREFIXES = ["/dashboard"];
 const AUTH_ROUTES = ["/login"];
 
-export async function middleware(request) {
+export async function proxy(request) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
