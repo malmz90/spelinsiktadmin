@@ -18,6 +18,9 @@ export default function UserSearch({ defaultValue = "" }) {
       const params = new URLSearchParams(searchParams.toString());
       const nextValue = val.trim();
 
+      // New search terms should always start from the first page.
+      params.delete("page");
+
       if (nextValue) {
         params.set("q", nextValue);
       } else {

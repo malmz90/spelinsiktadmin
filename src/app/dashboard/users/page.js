@@ -109,32 +109,21 @@ export default async function UsersPage({ searchParams }) {
   const { q, page: pageParam } = await searchParams;
   const search = q?.trim() ?? "";
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-
-  let query = supabase
-    .from("users")
-    .select(
-      "id, name, email, role, municipality, avatar, age, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .range(from, to);
 
   let countQuery = supabase
     .from("users")
     .select("id", { count: "exact", head: true });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     countQuery = countQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
   }
 
-  const [{ data: users, error }, { count }] = await Promise.all([query, countQuery]);
+  const { count } = await countQuery;
   const totalUsers = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const shownFrom = totalUsers === 0 ? 0 : from + 1;
-  const shownTo = Math.min(from + (users?.length ?? 0), totalUsers);
+  const safeFrom = (safePage - 1) * PAGE_SIZE;
+  const safeTo = safeFrom + PAGE_SIZE - 1;
   const canGoPrev = safePage > 1;
   const canGoNext = safePage < totalPages;
 
@@ -145,6 +134,25 @@ export default async function UsersPage({ searchParams }) {
     const qs = params.toString();
     return qs ? `/dashboard/users?${qs}` : "/dashboard/users";
   };
+
+  // Keep URL page in sync with available data pages.
+  if (page !== safePage) {
+    redirect(buildPageHref(safePage));
+  }
+
+  let query = supabase
+    .from("users")
+    .select("id, name, email, role, municipality, avatar, age, created_at")
+    .order("created_at", { ascending: false })
+    .range(safeFrom, safeTo);
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+
+  const { data: users, error } = await query;
+  const shownFrom = totalUsers === 0 ? 0 : safeFrom + 1;
+  const shownTo = Math.min(safeFrom + (users?.length ?? 0), totalUsers);
 
   const COL = {
     name: "220px",
