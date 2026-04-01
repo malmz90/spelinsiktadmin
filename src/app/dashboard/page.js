@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isAdmin } from "@/lib/auth";
+import { hasAdminAccess, requireAuthenticatedUser } from "@/lib/authService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   COLORS,
@@ -17,14 +16,8 @@ export const metadata = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Middleware handles the unauthenticated case, but double-check here
-  if (!user) redirect("/login");
-
-  const admin = await isAdmin(supabase, user.id);
+  const user = await requireAuthenticatedUser(supabase, "/login");
+  const admin = await hasAdminAccess(supabase, user.id);
 
   if (!admin) {
     return (

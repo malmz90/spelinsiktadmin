@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { COLORS, FONT_FAMILY, FONT_SIZES, FONT_WEIGHT } from "@/constants";
 import styles from "./UserSearch.module.css";
 
@@ -46,7 +46,7 @@ export default function UserSearch({ defaultValue = "" }) {
 
   return (
     <div className={styles.wrapper}>
-      <MagnifyingGlass
+      <MagnifyingGlassIcon
         size={18}
         color={COLORS.textPrimary}
         style={{ opacity: 0.4, flexShrink: 0 }}

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { isAdmin } from "@/lib/auth";
+import { requireAdminUser } from "@/lib/authService";
+import { USERS_PAGE_SIZE, fetchUsersPage } from "@/lib/usersService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import AppText from "@/components/AppText";
 import UserSearch from "./UserSearch";
@@ -10,8 +11,6 @@ import { COLORS, FONT_FAMILY, FONT_SIZES, FONT_WEIGHT, SPACING } from "@/constan
 export const metadata = {
   title: "Användare – Spelinsikt Admin",
 };
-
-const PAGE_SIZE = 25;
 
 function RoleBadge({ role }) {
   const isAdminRole = role === "ADMIN";
@@ -97,35 +96,29 @@ function formatDate(iso) {
 
 export default async function UsersPage({ searchParams }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const admin = await isAdmin(supabase, user.id);
-  if (!admin) redirect("/dashboard");
+  const user = await requireAdminUser(supabase, {
+    loginRedirect: "/login",
+    notAdminRedirect: "/dashboard",
+  });
 
   const { q, page: pageParam } = await searchParams;
   const search = q?.trim() ?? "";
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
 
-  let countQuery = supabase
-    .from("users")
-    .select("id", { count: "exact", head: true });
-
-  if (search) {
-    countQuery = countQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
-
-  const { count } = await countQuery;
-  const totalUsers = count ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const safeFrom = (safePage - 1) * PAGE_SIZE;
-  const safeTo = safeFrom + PAGE_SIZE - 1;
-  const canGoPrev = safePage > 1;
-  const canGoNext = safePage < totalPages;
+  const {
+    users,
+    error,
+    totalUsers,
+    safePage,
+    canGoPrev,
+    canGoNext,
+    shownFrom,
+    shownTo,
+  } = await fetchUsersPage(supabase, {
+    search,
+    page,
+    pageSize: USERS_PAGE_SIZE,
+  });
 
   const buildPageHref = (nextPage) => {
     const params = new URLSearchParams();
@@ -139,20 +132,6 @@ export default async function UsersPage({ searchParams }) {
   if (page !== safePage) {
     redirect(buildPageHref(safePage));
   }
-
-  let query = supabase
-    .from("users")
-    .select("id, name, email, role, municipality, avatar, age, created_at")
-    .order("created_at", { ascending: false })
-    .range(safeFrom, safeTo);
-
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
-  }
-
-  const { data: users, error } = await query;
-  const shownFrom = totalUsers === 0 ? 0 : safeFrom + 1;
-  const shownTo = Math.min(safeFrom + (users?.length ?? 0), totalUsers);
 
   const COL = {
     name: "220px",
