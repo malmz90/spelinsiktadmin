@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isAdmin } from "@/lib/auth";
+import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   COLORS,
   FONT_FAMILY,
@@ -85,105 +85,7 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* Sidebar */}
-      <aside
-        style={{
-          flex: "0 0 240px",
-          background: COLORS.sidebarBg,
-          display: "flex",
-          flexDirection: "column",
-          padding: "32px 0",
-        }}
-      >
-        <div style={{ padding: "0 24px 32px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <Image
-              src="/Icon_spelinsikt.png"
-              alt="Spelinsikt"
-              width={32}
-              height={32}
-              style={{ flexShrink: 0 }}
-            />
-            <span
-              style={{
-                fontFamily: FONT_FAMILY.primary,
-                fontWeight: FONT_WEIGHT.primary.bold,
-                fontSize: FONT_SIZES.body,
-                color: COLORS.sidebarText,
-              }}
-            >
-              Spelinsikt
-            </span>
-          </div>
-        </div>
-
-        <nav style={{ flex: 1, padding: "0 12px" }}>
-          {[
-            { label: "Dashboard", active: true },
-            { label: "Användare", active: false },
-            { label: "Innehåll", active: false },
-            { label: "Inställningar", active: false },
-          ].map(({ label, active }) => (
-            <div
-              key={label}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 8,
-                marginBottom: 2,
-                background: active ? "rgba(255,255,255,0.08)" : "transparent",
-                cursor: "pointer",
-                fontFamily: FONT_FAMILY.primary,
-                fontWeight: active
-                  ? FONT_WEIGHT.primary.semiBold
-                  : FONT_WEIGHT.primary.regular,
-                fontSize: FONT_SIZES.body,
-                color: active ? COLORS.sidebarText : COLORS.sidebarTextMuted,
-              }}
-            >
-              {label}
-            </div>
-          ))}
-        </nav>
-
-        {/* User info + sign out */}
-        <div
-          style={{
-            padding: "16px 24px",
-            borderTop: `1px solid rgba(255,255,255,0.08)`,
-          }}
-        >
-          <p
-            style={{
-              fontFamily: FONT_FAMILY.primary,
-              fontSize: FONT_SIZES.xSmall,
-              color: COLORS.sidebarTextMuted,
-              marginBottom: 8,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {user.email}
-          </p>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: FONT_FAMILY.primary,
-                fontSize: FONT_SIZES.xSmall,
-                fontWeight: FONT_WEIGHT.primary.medium,
-                color: COLORS.sidebarTextMuted,
-                padding: 0,
-              }}
-            >
-              Logga ut
-            </button>
-          </form>
-        </div>
-      </aside>
+      <DashboardSidebar user={user} activePage="/dashboard" />
 
       {/* Main content */}
       <main
@@ -191,7 +93,6 @@ export default async function DashboardPage() {
           flex: 1,
           background: COLORS.backgroundSecondary,
           padding: "40px 48px",
-          overflowY: "auto",
         }}
       >
         <div style={{ marginBottom: SPACING.x8 }}>

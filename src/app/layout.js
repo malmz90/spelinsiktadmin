@@ -9,6 +9,7 @@ const inter = Inter({
 const robotoSerif = Roboto_Serif({
   variable: "--font-roboto-serif",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata = {
