@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { hasAdminAccess, requireAuthenticatedUser } from "@/lib/authService";
+import { requireAdminUser } from "@/lib/authService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   COLORS,
@@ -16,65 +16,10 @@ export const metadata = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const user = await requireAuthenticatedUser(supabase, "/login");
-  const admin = await hasAdminAccess(supabase, user.id);
-
-  if (!admin) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: COLORS.backgroundSecondary,
-          fontFamily: FONT_FAMILY.primary,
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            padding: "48px 40px",
-            background: COLORS.backgroundPrimary,
-            borderRadius: 16,
-            border: `1px solid ${COLORS.borderSubtle}`,
-            maxWidth: 400,
-          }}
-        >
-          <p
-            style={{
-              fontSize: FONT_SIZES.h3,
-              fontWeight: FONT_WEIGHT.primary.bold,
-              color: COLORS.error,
-              marginBottom: 12,
-            }}
-          >
-            Ingen behörighet
-          </p>
-          <p
-            style={{
-              fontSize: FONT_SIZES.body,
-              color: COLORS.textPrimary,
-              opacity: 0.65,
-              marginBottom: 24,
-            }}
-          >
-            Ditt konto ({user.email}) har inte administratörsbehörighet.
-          </p>
-          <a
-            href="/login"
-            style={{
-              fontSize: FONT_SIZES.small,
-              fontWeight: FONT_WEIGHT.primary.medium,
-              color: COLORS.link,
-            }}
-          >
-            Logga ut och försök med ett annat konto
-          </a>
-        </div>
-      </div>
-    );
-  }
+  const user = await requireAdminUser(supabase, {
+    loginRedirect: "/login",
+    notAdminRedirect: "/login",
+  });
 
   const [{ count: usersCount }, { count: reportedPostsCount }] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }),
