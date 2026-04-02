@@ -5,8 +5,7 @@ import { COLORS, FONT_FAMILY, FONT_SIZES, FONT_WEIGHT } from "@/constants";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Användare", href: "/dashboard/users" },
-  { label: "Innehåll", href: "/dashboard/content" },
-  { label: "Inställningar", href: "/dashboard/settings" },
+  { label: "Rapporterade inlägg", href: "/dashboard/reported-posts" },
 ];
 
 export default function DashboardSidebar({ user, activePage }) {

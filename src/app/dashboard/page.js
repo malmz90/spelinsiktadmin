@@ -76,6 +76,16 @@ export default async function DashboardPage() {
     );
   }
 
+  const [{ count: usersCount }, { count: reportedPostsCount }] = await Promise.all([
+    supabase.from("users").select("id", { count: "exact", head: true }),
+    supabase.from("post_reports").select("id", { count: "exact", head: true }),
+  ]);
+
+  const stats = [
+    { label: "Användare", value: usersCount ?? 0 },
+    { label: "Rapporterade inlägg", value: reportedPostsCount ?? 0 },
+  ];
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <DashboardSidebar user={user} activePage="/dashboard" />
@@ -121,12 +131,7 @@ export default async function DashboardPage() {
             gap: SPACING.x5,
           }}
         >
-          {[
-            { label: "Användare", value: "—" },
-            { label: "Aktiva sessioner", value: "—" },
-            { label: "Innehållsposter", value: "—" },
-            { label: "Senaste aktivitet", value: "—" },
-          ].map(({ label, value }) => (
+          {stats.map(({ label, value }) => (
             <div
               key={label}
               style={{
