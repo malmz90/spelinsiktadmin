@@ -101,7 +101,7 @@ export default async function UsersPage({ searchParams }) {
     notAdminRedirect: "/dashboard",
   });
 
-  const { q, page: pageParam } = await searchParams;
+  const { q, page: pageParam, notice, tone } = await searchParams;
   const search = q?.trim() ?? "";
   const page = Math.max(1, Number.parseInt(pageParam ?? "1", 10) || 1);
 
@@ -139,9 +139,11 @@ export default async function UsersPage({ searchParams }) {
     role: "100px",
     municipality: "140px",
     joined: "120px",
+    actions: "100px",
   };
 
-  const gridTemplate = `${COL.name} ${COL.email} ${COL.role} ${COL.municipality} ${COL.joined}`;
+  const gridTemplate = `${COL.name} ${COL.email} ${COL.role} ${COL.municipality} ${COL.joined} ${COL.actions}`;
+  const noticeColor = tone === "error" ? COLORS.error : COLORS.primary;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -166,6 +168,24 @@ export default async function UsersPage({ searchParams }) {
             </AppText>
           </div>
         </div>
+
+        {notice ? (
+          <div
+            style={{
+              marginBottom: SPACING.x5,
+              border: `1px solid ${noticeColor}55`,
+              background: `${noticeColor}12`,
+              color: noticeColor,
+              borderRadius: 10,
+              padding: "10px 12px",
+              fontFamily: FONT_FAMILY.primary,
+              fontSize: FONT_SIZES.small,
+              fontWeight: FONT_WEIGHT.primary.medium,
+            }}
+          >
+            {notice}
+          </div>
+        ) : null}
 
         {/* Toolbar */}
         <div
@@ -238,7 +258,7 @@ export default async function UsersPage({ searchParams }) {
               gap: 16,
             }}
           >
-            {["Namn", "E-post", "Roll", "Kommun", "Registrerad"].map(
+            {["Namn", "E-post", "Roll", "Kommun", "Registrerad", ""].map(
               (col) => (
                 <span
                   key={col}
@@ -367,6 +387,19 @@ export default async function UsersPage({ searchParams }) {
                 >
                   {formatDate(u.created_at)}
                 </AppText>
+
+                <Link
+                  href={`/dashboard/users/${u.id}`}
+                  style={{
+                    textDecoration: "none",
+                    fontFamily: FONT_FAMILY.primary,
+                    fontSize: FONT_SIZES.small,
+                    fontWeight: FONT_WEIGHT.primary.medium,
+                    color: COLORS.link,
+                  }}
+                >
+                  Granska
+                </Link>
               </div>
             ))
           )}
