@@ -8,12 +8,17 @@ import {
 } from "@/lib/reportedPostsService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import AppText from "@/components/AppText";
-import { COLORS, FONT_FAMILY, FONT_SIZES, FONT_WEIGHT, SPACING } from "@/constants";
+import {
+  COLORS,
+  FONT_FAMILY,
+  FONT_SIZES,
+  FONT_WEIGHT,
+  SPACING,
+} from "@/constants";
 
 export const metadata = {
   title: "Rapporterade inlägg – Spelinsikt Admin",
 };
-
 function formatDate(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString("sv-SE", {
@@ -58,7 +63,10 @@ function PostPreview({ feed }) {
 function UserCell({ user }) {
   if (!user) {
     return (
-      <AppText variant="body" style={{ fontSize: FONT_SIZES.small, opacity: 0.5 }}>
+      <AppText
+        variant="body"
+        style={{ fontSize: FONT_SIZES.small, opacity: 0.5 }}
+      >
         Okänd användare
       </AppText>
     );
@@ -243,7 +251,15 @@ export default async function ReportedPostsPage({ searchParams }) {
               gap: 16,
             }}
           >
-            {["Inlägg", "Rapporterad av", "Inläggsägare", "Anledning", "Status", "Datum", ""] .map((col) => (
+            {[
+              "Inlägg",
+              "Rapporterad av",
+              "Inläggsägare",
+              "Anledning",
+              "Status",
+              "Datum",
+              "",
+            ].map((col) => (
               <span
                 key={col}
                 style={{
@@ -269,7 +285,8 @@ export default async function ReportedPostsPage({ searchParams }) {
               }}
             >
               <AppText variant="body" style={{ color: COLORS.error }}>
-                Kunde inte hämta rapporterade inlägg. Kontrollera databasanslutningen.
+                Kunde inte hämta rapporterade inlägg. Kontrollera
+                databasanslutningen.
               </AppText>
             </div>
           ) : !reports || reports.length === 0 ? (

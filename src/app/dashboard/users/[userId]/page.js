@@ -209,10 +209,6 @@ export default async function UserReviewPage({ params, searchParams }) {
                     <AppText variant="caption" style={{ opacity: 0.6 }}>
                       Roll: {user.role || "USER"} • Kommun: {user.municipality || "—"} • Ålder: {user.age || "—"}
                     </AppText>
-                    <AppText variant="caption" style={{ opacity: 0.6 }}>
-                      auth_id: {user.auth_id || "saknas"} • signup-frågor:{" "}
-                      {user.signup_questions_done ? "klara" : "ej klara"}
-                    </AppText>
                   </div>
                 </div>
 

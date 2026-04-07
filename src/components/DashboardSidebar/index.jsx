@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Användare", href: "/dashboard/users" },
   { label: "Rapporterade inlägg", href: "/dashboard/reported-posts" },
+  { label: "Blockerade domäner", href: "/dashboard/blocked-domains" },
 ];
 
 export default function DashboardSidebar({ user, activePage }) {
