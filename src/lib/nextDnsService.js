@@ -22,6 +22,34 @@ export function normalizeDenylistInput(value) {
   return domainRegex.test(normalized) ? normalized : null;
 }
 
+export function parseBulkDenylistInput(value) {
+  if (typeof value !== "string") {
+    return { validDomains: [], invalidEntries: [] };
+  }
+
+  const entries = value
+    .split(/[\n,;]+/g)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+  const validSet = new Set();
+  const invalidEntries = [];
+
+  for (const entry of entries) {
+    const normalized = normalizeDenylistInput(entry);
+    if (!normalized) {
+      invalidEntries.push(entry);
+      continue;
+    }
+    validSet.add(normalized);
+  }
+
+  return {
+    validDomains: Array.from(validSet),
+    invalidEntries,
+  };
+}
+
 function parseApiError(payload, fallback = "Okänt fel från NextDNS.") {
   if (!payload || typeof payload !== "object") return fallback;
   const firstError = Array.isArray(payload.errors) ? payload.errors[0] : null;
@@ -97,4 +125,35 @@ export async function addNextDnsDenylistDomain(domain) {
   });
 
   return normalizedDomain;
+}
+
+export async function addNextDnsDenylistDomainsBulk(rawInput) {
+  const { validDomains, invalidEntries } = parseBulkDenylistInput(rawInput);
+
+  if (validDomains.length === 0) {
+    throw new Error("Ingen giltig domän hittades. Ange minst en giltig URL eller domän.");
+  }
+
+  const addedDomains = [];
+  const failedDomains = [];
+
+  for (const domain of validDomains) {
+    try {
+      await addNextDnsDenylistDomain(domain);
+      addedDomains.push(domain);
+    } catch (error) {
+      failedDomains.push({
+        domain,
+        reason:
+          error instanceof Error ? error.message : "Kunde inte lägga till domänen i NextDNS.",
+      });
+    }
+  }
+
+  return {
+    addedDomains,
+    failedDomains,
+    invalidEntries,
+    submittedEntries: validDomains.length + invalidEntries.length,
+  };
 }

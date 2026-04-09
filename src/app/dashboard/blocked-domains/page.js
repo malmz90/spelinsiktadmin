@@ -122,7 +122,7 @@ export default async function BlockedDomainsPage({ searchParams }) {
             Blockera domän
           </AppText>
           <AppText variant="caption" style={{ opacity: 0.55, marginBottom: SPACING.x6, display: "block" }}>
-            Klistra in en domän eller full URL – vi sparar bara domänen.
+            Lägg till en domän direkt eller använd "Bulk blockera" för flera URL:er samtidigt.
           </AppText>
           <AddBlockedDomainForm />
         </div>
