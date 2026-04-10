@@ -1,5 +1,70 @@
 export const USERS_PAGE_SIZE = 25;
 
+/**
+ * Calculate months elapsed since a given date (fractional).
+ * Returns 0 if the date is in the future or invalid.
+ *
+ * @param {string} dateStr  ISO date string (e.g. "2024-03-15")
+ * @returns {number}
+ */
+function monthsSince(dateStr) {
+  if (!dateStr) return 0;
+  const past = new Date(dateStr);
+  const now = new Date();
+  if (isNaN(past.getTime()) || past > now) return 0;
+
+  const years = now.getFullYear() - past.getFullYear();
+  const months = now.getMonth() - past.getMonth();
+  const days = now.getDate() - past.getDate();
+
+  // Average days per month: 30.4375
+  return Math.max(0, years * 12 + months + days / 30.4375);
+}
+
+/**
+ * Fetch savings stats across all users based on user_onboarding data.
+ *
+ * Saved amount per user = monthsSince(last_gamble_date) × monthly_gamble_spend
+ *
+ * @param {import("@supabase/supabase-js").SupabaseClient} supabase
+ * @returns {Promise<{
+ *   totalSavedSEK: number;
+ *   activeSavers: number;
+ *   averageSavedSEK: number;
+ *   totalWithQuitDate: number;
+ * }>}
+ */
+export async function fetchSavingsStats(supabase) {
+  const { data, error } = await supabase
+    .from("user_onboarding")
+    .select("last_gamble_date, monthly_gamble_spend")
+    .not("last_gamble_date", "is", null)
+    .not("monthly_gamble_spend", "is", null)
+    .gt("monthly_gamble_spend", 0);
+
+  if (error || !data) {
+    return { totalSavedSEK: 0, activeSavers: 0, averageSavedSEK: 0, totalWithQuitDate: 0 };
+  }
+
+  let totalSavedSEK = 0;
+  let activeSavers = 0;
+
+  for (const row of data) {
+    const months = monthsSince(row.last_gamble_date);
+    if (months > 0) {
+      totalSavedSEK += months * Number(row.monthly_gamble_spend);
+      activeSavers++;
+    }
+  }
+
+  return {
+    totalSavedSEK: Math.round(totalSavedSEK),
+    activeSavers,
+    averageSavedSEK: activeSavers > 0 ? Math.round(totalSavedSEK / activeSavers) : 0,
+    totalWithQuitDate: data.length,
+  };
+}
+
 const USER_SELECT_FIELDS = "id, name, email, role, municipality, avatar, age, created_at";
 
 function applyUsersSearch(query, search) {

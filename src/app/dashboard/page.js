@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminUser } from "@/lib/authService";
+import { fetchSavingsStats } from "@/lib/usersService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   COLORS,
@@ -14,6 +15,14 @@ export const metadata = {
   title: "Dashboard – Spelinsikt Admin",
 };
 
+function formatSEK(amount) {
+  return new Intl.NumberFormat("sv-SE", {
+    style: "currency",
+    currency: "SEK",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const user = await requireAdminUser(supabase, {
@@ -21,21 +30,26 @@ export default async function DashboardPage() {
     notAdminRedirect: "/login",
   });
 
-  const [{ count: usersCount }, { count: reportedPostsCount }] = await Promise.all([
+  const [
+    { count: usersCount },
+    { count: reportedPostsCount },
+    savings,
+  ] = await Promise.all([
     supabase.from("users").select("id", { count: "exact", head: true }),
     supabase.from("post_reports").select("id", { count: "exact", head: true }),
+    fetchSavingsStats(supabase),
   ]);
 
   const stats = [
     { label: "Användare", value: usersCount ?? 0 },
     { label: "Rapporterade inlägg", value: reportedPostsCount ?? 0 },
+    { label: "Genomsnitt sparat / person", value: formatSEK(savings.averageSavedSEK) },
   ];
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <DashboardSidebar user={user} activePage="/dashboard" />
 
-      {/* Main content */}
       <main
         style={{
           flex: 1,
@@ -65,6 +79,42 @@ export default async function DashboardPage() {
             }}
           >
             Välkommen, {user.email}
+          </p>
+        </div>
+
+        {/* Hero savings card */}
+        <div
+          style={{
+            background: COLORS.primary,
+            borderRadius: 16,
+            padding: "32px 36px",
+            marginBottom: SPACING.x6,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: FONT_FAMILY.primary,
+              fontSize: FONT_SIZES.small,
+              fontWeight: FONT_WEIGHT.primary.semiBold,
+              color: "rgba(255,255,255,0.7)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              marginBottom: 10,
+            }}
+          >
+            Totalt sparat av alla användare
+          </p>
+          <p
+            style={{
+              fontFamily: FONT_FAMILY.secondary,
+              fontWeight: FONT_WEIGHT.secondary.bold,
+              fontSize: FONT_SIZES.hero1,
+              lineHeight: 1,
+              color: COLORS.textInverse,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {formatSEK(savings.totalSavedSEK)}
           </p>
         </div>
 
