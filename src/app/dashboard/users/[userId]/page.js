@@ -207,7 +207,7 @@ export default async function UserReviewPage({ params, searchParams }) {
                   <div style={{ minWidth: 0 }}>
                     <AppText variant="bodyStrong">{user.email || "Ingen e-post"}</AppText>
                     <AppText variant="caption" style={{ opacity: 0.6 }}>
-                      Roll: {user.role || "USER"} • Kommun: {user.municipality || "—"} • Ålder: {user.age || "—"}
+                      Roll: {user.role || "USER"} • Kommun: {user.municipality || "—"}
                     </AppText>
                   </div>
                 </div>

@@ -65,7 +65,7 @@ export async function fetchSavingsStats(supabase) {
   };
 }
 
-const USER_SELECT_FIELDS = "id, name, email, role, municipality, avatar, age, created_at";
+const USER_SELECT_FIELDS = "id, name, email, role, municipality, avatar, created_at";
 
 function applyUsersSearch(query, search) {
   if (!search) return query;
@@ -138,7 +138,7 @@ export async function fetchUserModerationDetail(supabase, { userId }) {
   const { data: user, error } = await supabase
     .from("users")
     .select(
-      "id, name, email, role, municipality, avatar, age, bio, created_at, updated_at, signup_questions_done, auth_id"
+      "id, name, email, role, municipality, avatar, bio, created_at, updated_at, signup_questions_done, auth_id"
     )
     .eq("id", userId)
     .maybeSingle();

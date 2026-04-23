@@ -346,14 +346,6 @@ export default async function UsersPage({ searchParams }) {
                     >
                       {u.name || "—"}
                     </AppText>
-                    {u.age && (
-                      <AppText
-                        variant="caption"
-                        style={{ opacity: 0.45, fontSize: FONT_SIZES.tiny, marginTop: 1 }}
-                      >
-                        {u.age} år
-                      </AppText>
-                    )}
                   </div>
                 </div>
 
