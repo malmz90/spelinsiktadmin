@@ -12,6 +12,7 @@ export default function UserSearch({ defaultValue = "" }) {
   const searchParams = useSearchParams();
   const [value, setValue] = useState(defaultValue);
   const debounceRef = useRef(null);
+  const normalizedDefaultValue = defaultValue.trim();
 
   const push = useCallback(
     (val) => {
@@ -39,10 +40,17 @@ export default function UserSearch({ defaultValue = "" }) {
   );
 
   useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
+
+  useEffect(() => {
     clearTimeout(debounceRef.current);
+
+    if (value.trim() === normalizedDefaultValue) return undefined;
+
     debounceRef.current = setTimeout(() => push(value), 300);
     return () => clearTimeout(debounceRef.current);
-  }, [value, push]);
+  }, [value, normalizedDefaultValue, push]);
 
   return (
     <div className={styles.wrapper}>

@@ -34,6 +34,39 @@ function truncate(text, maxLength = 88) {
   return `${text.slice(0, maxLength - 1)}…`;
 }
 
+function SponsorshipBadge({ role, status }) {
+  if (!role) return null;
+
+  const isSponsor = role === "sponsor";
+  const label = isSponsor ? "Sponsor/familj" : "Får stöd";
+  const statusLabel = status === "pending" ? "väntar" : "aktiv";
+  const tone = isSponsor ? COLORS.primary : COLORS.info;
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        width: "fit-content",
+        marginTop: 5,
+        border: `1px solid ${tone}44`,
+        borderRadius: 999,
+        background: `${tone}12`,
+        color: tone,
+        padding: "2px 7px",
+        fontFamily: FONT_FAMILY.primary,
+        fontSize: FONT_SIZES.xSmall,
+        fontWeight: FONT_WEIGHT.primary.semiBold,
+        lineHeight: 1.25,
+      }}
+      title={`Sponsor/familj-relation: ${statusLabel}`}
+    >
+      {label}
+      <span style={{ opacity: 0.65, marginLeft: 4 }}>({statusLabel})</span>
+    </span>
+  );
+}
+
 function PostPreview({ feed }) {
   if (!feed) return <AppText variant="body">Inlägg saknas</AppText>;
 
@@ -60,7 +93,7 @@ function PostPreview({ feed }) {
   );
 }
 
-function UserCell({ user }) {
+function UserCell({ user, sponsorshipRole, sponsorshipStatus }) {
   if (!user) {
     return (
       <AppText
@@ -88,6 +121,7 @@ function UserCell({ user }) {
       >
         {user.email || "E-post saknas"}
       </AppText>
+      <SponsorshipBadge role={sponsorshipRole} status={sponsorshipStatus} />
     </div>
   );
 }
@@ -327,9 +361,17 @@ export default async function ReportedPostsPage({ searchParams }) {
               >
                 <PostPreview feed={report.feed} />
 
-                <UserCell user={report.reporter} />
+                <UserCell
+                  user={report.reporter}
+                  sponsorshipRole={report.sponsorshipContext?.reporterRole}
+                  sponsorshipStatus={report.sponsorshipContext?.status}
+                />
 
-                <UserCell user={report.post_owner} />
+                <UserCell
+                  user={report.post_owner}
+                  sponsorshipRole={report.sponsorshipContext?.postOwnerRole}
+                  sponsorshipStatus={report.sponsorshipContext?.status}
+                />
 
                 <AppText
                   variant="body"

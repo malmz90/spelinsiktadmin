@@ -12,6 +12,38 @@ export const metadata = {
   title: "Användare – Spelinsikt Admin",
 };
 
+function SponsorshipBadge({ sponsorship }) {
+  if (!sponsorship) return null;
+  const isSponsor = sponsorship.role === "sponsor";
+  const label = isSponsor ? "Sponsor/familj" : "Får stöd";
+  const statusLabel = sponsorship.status === "pending" ? "väntar" : "aktiv";
+  const color = isSponsor ? COLORS.primary : COLORS.info;
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        marginTop: 4,
+        border: `1px solid ${color}44`,
+        borderRadius: 999,
+        background: `${color}12`,
+        color,
+        padding: "2px 7px",
+        fontFamily: FONT_FAMILY.primary,
+        fontSize: FONT_SIZES.xSmall,
+        fontWeight: FONT_WEIGHT.primary.semiBold,
+        lineHeight: 1.25,
+        whiteSpace: "nowrap",
+      }}
+      title={`Sponsor/familj-relation: ${statusLabel}`}
+    >
+      {label}
+      <span style={{ opacity: 0.65, marginLeft: 4 }}>({statusLabel})</span>
+    </span>
+  );
+}
+
 function RoleBadge({ role }) {
   const isAdminRole = role === "ADMIN";
   return (
@@ -346,6 +378,7 @@ export default async function UsersPage({ searchParams }) {
                     >
                       {u.name || "—"}
                     </AppText>
+                    <SponsorshipBadge sponsorship={u.sponsorship} />
                   </div>
                 </div>
 

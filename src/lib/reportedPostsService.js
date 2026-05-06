@@ -12,6 +12,86 @@ const REPORT_SELECT_FIELDS = `
   reporter:users!post_reports_reporter_id_fkey(id, name, email)
 `;
 
+const SPONSORSHIP_SELECT_FIELDS =
+  "id, sponsor_id, gambler_id, status, created_at, updated_at";
+
+function getReportUserIds(reports = []) {
+  return Array.from(
+    new Set(
+      reports
+        .flatMap((report) => [report?.reporter_id, report?.post_owner_id])
+        .filter(Boolean)
+    )
+  );
+}
+
+async function fetchSponsorshipsForUsers(supabase, userIds) {
+  if (!userIds || userIds.length === 0) return [];
+
+  const [{ data: sponsorMatches }, { data: gamblerMatches }] = await Promise.all([
+    supabase
+      .from("sponsorships")
+      .select(SPONSORSHIP_SELECT_FIELDS)
+      .in("sponsor_id", userIds),
+    supabase
+      .from("sponsorships")
+      .select(SPONSORSHIP_SELECT_FIELDS)
+      .in("gambler_id", userIds),
+  ]);
+
+  return Array.from(
+    new Map(
+      [...(sponsorMatches ?? []), ...(gamblerMatches ?? [])].map((sponsorship) => [
+        sponsorship.id,
+        sponsorship,
+      ])
+    ).values()
+  );
+}
+
+function buildSponsorshipLookup(sponsorships = []) {
+  const lookup = new Map();
+  for (const sponsorship of sponsorships) {
+    if (!sponsorship?.sponsor_id || !sponsorship?.gambler_id) continue;
+    lookup.set(`${sponsorship.sponsor_id}:${sponsorship.gambler_id}`, sponsorship);
+  }
+  return lookup;
+}
+
+function getSponsorshipContext(report, sponsorshipLookup) {
+  const reporterId = report?.reporter_id;
+  const postOwnerId = report?.post_owner_id;
+  if (!reporterId || !postOwnerId) return null;
+
+  const sponsorship =
+    sponsorshipLookup.get(`${reporterId}:${postOwnerId}`) ??
+    sponsorshipLookup.get(`${postOwnerId}:${reporterId}`);
+
+  if (!sponsorship) return null;
+
+  return {
+    sponsorship,
+    status: sponsorship.status,
+    reporterRole: sponsorship.sponsor_id === reporterId ? "sponsor" : "gambler",
+    postOwnerRole: sponsorship.sponsor_id === postOwnerId ? "sponsor" : "gambler",
+  };
+}
+
+async function addSponsorshipContext(supabase, reports = []) {
+  if (!reports || reports.length === 0) return reports ?? [];
+
+  const sponsorships = await fetchSponsorshipsForUsers(
+    supabase,
+    getReportUserIds(reports)
+  );
+  const sponsorshipLookup = buildSponsorshipLookup(sponsorships);
+
+  return reports.map((report) => ({
+    ...report,
+    sponsorshipContext: getSponsorshipContext(report, sponsorshipLookup),
+  }));
+}
+
 /**
  * Fetch paginated post reports for admin dashboard.
  *
@@ -40,9 +120,13 @@ export async function fetchReportedPostsPage(
     .select(REPORT_SELECT_FIELDS)
     .order("created_at", { ascending: false })
     .range(from, to);
+  const reportsWithSponsorshipContext = await addSponsorshipContext(
+    supabase,
+    reports ?? []
+  );
 
   return {
-    reports,
+    reports: reportsWithSponsorshipContext,
     error,
     totalReports,
     totalPages,
@@ -102,9 +186,13 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
   }
 
   if (!report.feed_id) {
-    return {
+    const [reportWithSponsorshipContext] = await addSponsorshipContext(supabase, [
       report,
-      allReportsForFeed: [report],
+    ]);
+
+    return {
+      report: reportWithSponsorshipContext,
+      allReportsForFeed: [reportWithSponsorshipContext],
       comments: [],
       feedLikeSummary: [],
       totalFeedLikes: 0,
@@ -176,10 +264,21 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
 
   const feedLikeSummary = buildEmojiSummary(feedLikesRaw ?? []);
   const totalCommentLikes = (commentLikesRaw ?? []).length;
+  const allReportsWithOwner = (allReportsForFeed ?? [report]).map((feedReport) => ({
+    ...feedReport,
+    post_owner_id: report.post_owner_id,
+  }));
+  const allReportsWithSponsorshipContext = await addSponsorshipContext(
+    supabase,
+    allReportsWithOwner
+  );
+  const reportWithSponsorshipContext =
+    allReportsWithSponsorshipContext.find((feedReport) => feedReport.id === report.id) ??
+    (await addSponsorshipContext(supabase, [report]))[0];
 
   return {
-    report,
-    allReportsForFeed: allReportsForFeed ?? [report],
+    report: reportWithSponsorshipContext,
+    allReportsForFeed: allReportsWithSponsorshipContext,
     comments,
     feedLikeSummary,
     totalFeedLikes: (feedLikesRaw ?? []).length,

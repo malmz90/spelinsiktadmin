@@ -72,6 +72,30 @@ function applyUsersSearch(query, search) {
   return query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
 }
 
+async function fetchSponsorshipRolesForUsers(supabase, userIds) {
+  if (!userIds || userIds.length === 0) return new Map();
+
+  const [{ data: asSponsor }, { data: asGambler }] = await Promise.all([
+    supabase
+      .from("sponsorships")
+      .select("sponsor_id, status")
+      .in("sponsor_id", userIds),
+    supabase
+      .from("sponsorships")
+      .select("gambler_id, status")
+      .in("gambler_id", userIds),
+  ]);
+
+  const lookup = new Map();
+  for (const s of asSponsor ?? []) {
+    lookup.set(s.sponsor_id, { role: "sponsor", status: s.status });
+  }
+  for (const s of asGambler ?? []) {
+    lookup.set(s.gambler_id, { role: "gambler", status: s.status });
+  }
+  return lookup;
+}
+
 /**
  * Fetch paginated users for admin dashboard.
  *
@@ -107,8 +131,16 @@ export async function fetchUsersPage(
 
   const { data: users, error } = await usersQuery;
 
+  const userIds = (users ?? []).map((u) => u.id).filter(Boolean);
+  const sponsorshipLookup = await fetchSponsorshipRolesForUsers(supabase, userIds);
+
+  const usersWithSponsorship = (users ?? []).map((u) => ({
+    ...u,
+    sponsorship: sponsorshipLookup.get(u.id) ?? null,
+  }));
+
   return {
-    users,
+    users: usersWithSponsorship,
     error,
     totalUsers,
     totalPages,
