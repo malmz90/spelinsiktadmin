@@ -211,25 +211,25 @@ export async function fetchUserModerationDetail(supabase, { userId }) {
     totalComments,
     totalReportsMade,
     totalReportsAgainst,
-    totalFeedLikes,
+    totalPostReactions,
     totalCommentLikes,
   ] = await Promise.all([
     supabase
-      .from("feeds")
+      .from("posts")
       .select("id, title, body, file, audience, is_edited, created_at")
-      .eq("userid", userId)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
       .from("comments")
-      .select("id, feedId, text, created_at, feed:feeds!comments_feedId_fkey(id, title)")
-      .eq("userId", userId)
+      .select("id, post_id, text, created_at, post:posts!comments_feedId_fkey(id, title)")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
       .from("post_reports")
       .select(
-        "id, reason, created_at, feed_id, feed:feeds!post_reports_feed_id_fkey(id, title), post_owner:users!post_reports_post_owner_id_fkey(id, name)"
+        "id, reason, created_at, post_id, post:posts!post_reports_feed_id_fkey(id, title), post_owner:users!post_reports_post_owner_id_fkey(id, name)"
       )
       .eq("reporter_id", userId)
       .order("created_at", { ascending: false })
@@ -237,7 +237,7 @@ export async function fetchUserModerationDetail(supabase, { userId }) {
     supabase
       .from("post_reports")
       .select(
-        "id, reason, created_at, feed_id, feed:feeds!post_reports_feed_id_fkey(id, title), reporter:users!post_reports_reporter_id_fkey(id, name)"
+        "id, reason, created_at, post_id, post:posts!post_reports_feed_id_fkey(id, title), reporter:users!post_reports_reporter_id_fkey(id, name)"
       )
       .eq("post_owner_id", userId)
       .order("created_at", { ascending: false })
@@ -287,12 +287,12 @@ export async function fetchUserModerationDetail(supabase, { userId }) {
       .select("id, token, updated_at")
       .eq("user_id", userId)
       .maybeSingle(),
-    countByEq(supabase, "feeds", "userid", userId),
-    countByEq(supabase, "comments", "userId", userId),
+    countByEq(supabase, "posts", "user_id", userId),
+    countByEq(supabase, "comments", "user_id", userId),
     countByEq(supabase, "post_reports", "reporter_id", userId),
     countByEq(supabase, "post_reports", "post_owner_id", userId),
-    countByEq(supabase, "feedLikes", "userId", userId),
-    countByEq(supabase, "commentLikes", "userId", userId),
+    countByEq(supabase, "reactions", "user_id", userId),
+    countByEq(supabase, "comment_likes", "user_id", userId),
   ]);
 
   return {
@@ -302,7 +302,7 @@ export async function fetchUserModerationDetail(supabase, { userId }) {
       totalComments,
       totalReportsMade,
       totalReportsAgainst,
-      totalFeedLikes,
+      totalPostReactions,
       totalCommentLikes,
       totalFriendships: (friendshipsRes.data ?? []).length,
       totalNotifications: notificationsRes.data?.length ?? 0,

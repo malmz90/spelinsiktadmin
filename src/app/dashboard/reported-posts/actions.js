@@ -97,9 +97,9 @@ function buildStorageCandidates(fileValue, userId) {
 
 export async function deleteReportedFeedAction(formData) {
   const reportId = String(formData.get("reportId") ?? "");
-  const feedId = String(formData.get("feedId") ?? "");
+  const postId = String(formData.get("postId") ?? "");
 
-  if (!reportId || !feedId) {
+  if (!reportId || !postId) {
     redirect("/dashboard/reported-posts?notice=" + encodeNotice("Saknar postdata för att radera."));
   }
 
@@ -109,46 +109,46 @@ export async function deleteReportedFeedAction(formData) {
     notAdminRedirect: "/dashboard",
   });
 
-  const { data: feed } = await supabase
-    .from("feeds")
-    .select("file, userid")
-    .eq("id", feedId)
+  const { data: post } = await supabase
+    .from("posts")
+    .select("file, user_id")
+    .eq("id", postId)
     .maybeSingle();
-  const storageCandidates = buildStorageCandidates(feed?.file, feed?.userid);
+  const storageCandidates = buildStorageCandidates(post?.file, post?.user_id);
 
   const { data: comments } = await supabase
     .from("comments")
     .select("id")
-    .eq("feedId", feedId);
+    .eq("post_id", postId);
 
   const commentIds = (comments ?? []).map((comment) => comment.id).filter(Boolean);
   if (commentIds.length > 0) {
     const { error: commentLikesError } = await supabase
-      .from("commentLikes")
+      .from("comment_likes")
       .delete()
-      .in("commentId", commentIds);
+      .in("comment_id", commentIds);
     if (commentLikesError) {
       redirect(buildDetailHref(reportId, "Kunde inte radera comment likes.", "error"));
     }
   }
 
-  const { error: commentsError } = await supabase.from("comments").delete().eq("feedId", feedId);
+  const { error: commentsError } = await supabase.from("comments").delete().eq("post_id", postId);
   if (commentsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera kommentarer.", "error"));
   }
 
-  const { error: feedLikesError } = await supabase.from("feedLikes").delete().eq("feedId", feedId);
-  if (feedLikesError) {
+  const { error: reactionsError } = await supabase.from("reactions").delete().eq("post_id", postId);
+  if (reactionsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera likes.", "error"));
   }
 
-  const { error: reportsError } = await supabase.from("post_reports").delete().eq("feed_id", feedId);
+  const { error: reportsError } = await supabase.from("post_reports").delete().eq("post_id", postId);
   if (reportsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera rapporter.", "error"));
   }
 
-  const { error: feedError } = await supabase.from("feeds").delete().eq("id", feedId);
-  if (feedError) {
+  const { error: postError } = await supabase.from("posts").delete().eq("id", postId);
+  if (postError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera inlägget.", "error"));
   }
 

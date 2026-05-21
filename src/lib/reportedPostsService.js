@@ -2,12 +2,12 @@ export const REPORTED_POSTS_PAGE_SIZE = 25;
 
 const REPORT_SELECT_FIELDS = `
   id,
-  feed_id,
+  post_id,
   post_owner_id,
   reporter_id,
   reason,
   created_at,
-  feed:feeds!post_reports_feed_id_fkey(id, title, body, file, audience, created_at),
+  post:posts!post_reports_feed_id_fkey(id, title, body, file, audience, created_at),
   post_owner:users!post_reports_post_owner_id_fkey(id, name, email),
   reporter:users!post_reports_reporter_id_fkey(id, name, email)
 `;
@@ -160,12 +160,12 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
     .select(
       `
       id,
-      feed_id,
+      post_id,
       post_owner_id,
       reporter_id,
       reason,
       created_at,
-      feed:feeds!post_reports_feed_id_fkey(id, title, body, file, audience, created_at),
+      post:posts!post_reports_feed_id_fkey(id, title, body, file, audience, created_at),
       post_owner:users!post_reports_post_owner_id_fkey(id, name, email),
       reporter:users!post_reports_reporter_id_fkey(id, name, email)
     `
@@ -178,14 +178,14 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
       report: null,
       allReportsForFeed: [],
       comments: [],
-      feedLikeSummary: [],
-      totalFeedLikes: 0,
+      reactionSummary: [],
+      totalPostReactions: 0,
       totalCommentLikes: 0,
       error: error ?? new Error("Report not found"),
     };
   }
 
-  if (!report.feed_id) {
+  if (!report.post_id) {
     const [reportWithSponsorshipContext] = await addSponsorshipContext(supabase, [
       report,
     ]);
@@ -194,8 +194,8 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
       report: reportWithSponsorshipContext,
       allReportsForFeed: [reportWithSponsorshipContext],
       comments: [],
-      feedLikeSummary: [],
-      totalFeedLikes: 0,
+      reactionSummary: [],
+      totalPostReactions: 0,
       totalCommentLikes: 0,
       error: null,
     };
@@ -204,7 +204,7 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
   const [
     { data: allReportsForFeed },
     { data: commentsRaw },
-    { data: feedLikesRaw },
+    { data: postReactionsRaw },
   ] = await Promise.all([
     supabase
       .from("post_reports")
@@ -217,37 +217,37 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
         reporter:users!post_reports_reporter_id_fkey(id, name, email)
       `
       )
-      .eq("feed_id", report.feed_id)
+      .eq("post_id", report.post_id)
       .order("created_at", { ascending: false }),
     supabase
       .from("comments")
       .select(
         `
         id,
-        feedId,
-        userId,
+        post_id,
+        user_id,
         text,
         created_at,
         user:users!comments_userId_fkey(id, name, email)
       `
       )
-      .eq("feedId", report.feed_id)
+      .eq("post_id", report.post_id)
       .order("created_at", { ascending: false }),
-    supabase.from("feedLikes").select("id, feedId, userId, emoji").eq("feedId", report.feed_id),
+    supabase.from("reactions").select("id, post_id, user_id, emoji").eq("post_id", report.post_id),
   ]);
 
   const commentIds = (commentsRaw ?? []).map((comment) => comment.id).filter(Boolean);
   const { data: commentLikesRaw } =
     commentIds.length > 0
       ? await supabase
-          .from("commentLikes")
-          .select("id, commentId, userId, emoji")
-          .in("commentId", commentIds)
+          .from("comment_likes")
+          .select("id, comment_id, user_id, emoji")
+          .in("comment_id", commentIds)
       : { data: [] };
 
   const commentLikesByComment = new Map();
   for (const like of commentLikesRaw ?? []) {
-    const key = like.commentId;
+    const key = like.comment_id;
     if (!commentLikesByComment.has(key)) commentLikesByComment.set(key, []);
     commentLikesByComment.get(key).push(like);
   }
@@ -262,7 +262,7 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
     };
   });
 
-  const feedLikeSummary = buildEmojiSummary(feedLikesRaw ?? []);
+  const reactionSummary = buildEmojiSummary(postReactionsRaw ?? []);
   const totalCommentLikes = (commentLikesRaw ?? []).length;
   const allReportsWithOwner = (allReportsForFeed ?? [report]).map((feedReport) => ({
     ...feedReport,
@@ -280,8 +280,8 @@ export async function fetchReportedPostDetail(supabase, { reportId }) {
     report: reportWithSponsorshipContext,
     allReportsForFeed: allReportsWithSponsorshipContext,
     comments,
-    feedLikeSummary,
-    totalFeedLikes: (feedLikesRaw ?? []).length,
+    reactionSummary,
+    totalPostReactions: (postReactionsRaw ?? []).length,
     totalCommentLikes,
     error: null,
   };

@@ -97,8 +97,8 @@ function formatDate(iso) {
 }
 
 function FeedStatus({ report }) {
-  const hasFeed = Boolean(report?.feed);
-  if (!hasFeed) {
+  const hasPost = Boolean(report?.post);
+  if (!hasPost) {
     return (
       <span
         style={{
@@ -118,7 +118,7 @@ function FeedStatus({ report }) {
     );
   }
 
-  const isHidden = report.feed.audience === "ADMIN";
+  const isHidden = report.post.audience === "ADMIN";
   if (isHidden) {
     return (
       <span
@@ -197,12 +197,12 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
     report,
     allReportsForFeed,
     comments,
-    feedLikeSummary,
-    totalFeedLikes,
+    reactionSummary,
+    totalPostReactions,
     totalCommentLikes,
     error,
   } = await fetchReportedPostDetail(supabase, { reportId });
-  const imageUrl = await resolveImageUrl(supabase, report?.feed?.file);
+  const imageUrl = await resolveImageUrl(supabase, report?.post?.file);
 
   const noticeColor = tone === "error" ? COLORS.error : COLORS.primary;
 
@@ -268,14 +268,14 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
           <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: SPACING.x5 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: SPACING.x5 }}>
               <SectionCard
-                title={report.feed?.title || "Utan titel"}
-                subtitle={`Publicerat ${formatDate(report.feed?.created_at)}`}
+                title={report.post?.title || "Utan titel"}
+                subtitle={`Publicerat ${formatDate(report.post?.created_at)}`}
               >
                 <AppText as="p" variant="body" style={{ opacity: 0.85, whiteSpace: "pre-wrap" }}>
-                  {report.feed?.body || "Inläggstext saknas"}
+                  {report.post?.body || "Inläggstext saknas"}
                 </AppText>
 
-                {report.feed?.file ? (
+                {report.post?.file ? (
                   <div style={{ marginTop: 14 }}>
                     <AppText variant="caption" style={{ opacity: 0.55, marginBottom: 6 }}>
                       Bild
@@ -297,7 +297,7 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
                       </>
                     ) : (
                       <AppText variant="caption" style={{ opacity: 0.6 }}>
-                        Kunde inte läsa bildlänken: {report.feed.file}
+                        Kunde inte läsa bildlänken: {report.post.file}
                       </AppText>
                     )}
                   </div>
@@ -346,16 +346,16 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
 
             <div style={{ display: "flex", flexDirection: "column", gap: SPACING.x5 }}>
               <SectionCard
-                title={`Likes på inlägg (${totalFeedLikes})`}
+                title={`Likes på inlägg (${totalPostReactions})`}
                 subtitle="Sammanställning av reaktioner på själva inlägget"
               >
-                {feedLikeSummary.length === 0 ? (
+                {reactionSummary.length === 0 ? (
                   <AppText variant="body" style={{ opacity: 0.6 }}>
                     Inga likes ännu.
                   </AppText>
                 ) : (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {feedLikeSummary.map((entry) => (
+                    {reactionSummary.map((entry) => (
                       <span
                         key={entry.emoji}
                         style={{
@@ -396,7 +396,7 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
               </SectionCard>
 
               <SectionCard title="Moderering">
-                {!report.feed ? (
+                {!report.post ? (
                   <AppText variant="body" style={{ opacity: 0.6 }}>
                     Inlägget är redan borttaget.
                   </AppText>
@@ -404,7 +404,7 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     <form action={deleteReportedFeedAction}>
                       <input type="hidden" name="reportId" value={report.id} />
-                      <input type="hidden" name="feedId" value={report.feed_id} />
+                      <input type="hidden" name="postId" value={report.post_id} />
                       <ConfirmSubmitButton
                         variant="danger"
                         confirmText="Radera permanent? Detta tar bort inlägget, kommentarer, likes och rapporter."

@@ -67,11 +67,11 @@ function SponsorshipBadge({ role, status }) {
   );
 }
 
-function PostPreview({ feed }) {
-  if (!feed) return <AppText variant="body">Inlägg saknas</AppText>;
+function PostPreview({ post }) {
+  if (!post) return <AppText variant="body">Inlägg saknas</AppText>;
 
-  const title = feed.title?.trim();
-  const body = feed.body?.trim();
+  const title = post.title?.trim();
+  const body = post.body?.trim();
 
   return (
     <div style={{ minWidth: 0 }}>
@@ -127,8 +127,8 @@ function UserCell({ user, sponsorshipRole, sponsorshipStatus }) {
 }
 
 function getReportStatus(report) {
-  if (!report?.feed) return "Raderat";
-  if (report.feed.audience === "ADMIN") return "Dold";
+  if (!report?.post) return "Raderat";
+  if (report.post.audience === "ADMIN") return "Dold";
   return "Aktiv";
 }
 
@@ -359,7 +359,7 @@ export default async function ReportedPostsPage({ searchParams }) {
                   transition: "background 0.1s ease",
                 }}
               >
-                <PostPreview feed={report.feed} />
+                <PostPreview post={report.post} />
 
                 <UserCell
                   user={report.reporter}

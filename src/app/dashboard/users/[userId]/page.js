@@ -265,7 +265,7 @@ export default async function UserReviewPage({ params, searchParams }) {
                       >
                         <AppText variant="body">{truncate(comment.text, 180)}</AppText>
                         <AppText variant="caption" style={{ opacity: 0.6 }}>
-                          {formatDate(comment.created_at)} • På inlägg: {comment.feed?.title || comment.feedId}
+                          {formatDate(comment.created_at)} • På inlägg: {comment.post?.title || comment.post_id}
                         </AppText>
                       </div>
                     ))}
@@ -281,7 +281,7 @@ export default async function UserReviewPage({ params, searchParams }) {
                   <StatPill label="Kommentarer" value={stats.totalComments} />
                   <StatPill label="Rapporter gjorda" value={stats.totalReportsMade} />
                   <StatPill label="Rapporter mot user" value={stats.totalReportsAgainst} />
-                  <StatPill label="Post-likes" value={stats.totalFeedLikes} />
+                  <StatPill label="Post-likes" value={stats.totalPostReactions} />
                   <StatPill label="Kommentar-likes" value={stats.totalCommentLikes} />
                   <StatPill label="Vänner" value={stats.totalFriendships} />
                 </div>
@@ -308,7 +308,7 @@ export default async function UserReviewPage({ params, searchParams }) {
                       >
                         <AppText variant="body">{truncate(entry.reason, 140)}</AppText>
                         <AppText variant="caption" style={{ opacity: 0.6 }}>
-                          {formatDate(entry.created_at)} • Inlägg: {entry.feed?.title || entry.feed_id}
+                          {formatDate(entry.created_at)} • Inlägg: {entry.post?.title || entry.post_id}
                         </AppText>
                       </div>
                     ))}

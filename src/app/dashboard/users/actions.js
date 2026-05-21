@@ -136,27 +136,27 @@ export async function deleteUserAction(formData) {
     redirect(`/dashboard/users?notice=${encodeNotice("Du kan inte radera ditt eget konto.")}&tone=error`);
   }
 
-  const [{ data: ownedFeeds }, { data: lovedOnesPhoto }] = await Promise.all([
-    supabase.from("feeds").select("id, file").eq("userid", userId),
+  const [{ data: ownedPosts }, { data: lovedOnesPhoto }] = await Promise.all([
+    supabase.from("posts").select("id, file").eq("user_id", userId),
     supabase.from("loved_ones_photos").select("image_path").eq("user_id", userId).maybeSingle(),
   ]);
 
-  const ownedFeedIds = (ownedFeeds ?? []).map((feed) => feed.id).filter(Boolean);
-  const ownedFeedFiles = (ownedFeeds ?? []).map((feed) => feed.file).filter(Boolean);
+  const ownedPostIds = (ownedPosts ?? []).map((post) => post.id).filter(Boolean);
+  const ownedPostFiles = (ownedPosts ?? []).map((post) => post.file).filter(Boolean);
 
-  if (ownedFeedIds.length > 0) {
-    const { data: feedComments } = await supabase
+  if (ownedPostIds.length > 0) {
+    const { data: postComments } = await supabase
       .from("comments")
       .select("id")
-      .in("feedId", ownedFeedIds);
-    const feedCommentIds = (feedComments ?? []).map((comment) => comment.id).filter(Boolean);
+      .in("post_id", ownedPostIds);
+    const postCommentIds = (postComments ?? []).map((comment) => comment.id).filter(Boolean);
 
-    if (feedCommentIds.length > 0) {
-      const { error: feedCommentLikesError } = await supabase
-        .from("commentLikes")
+    if (postCommentIds.length > 0) {
+      const { error: postCommentLikesError } = await supabase
+        .from("comment_likes")
         .delete()
-        .in("commentId", feedCommentIds);
-      if (feedCommentLikesError) {
+        .in("comment_id", postCommentIds);
+      if (postCommentLikesError) {
         redirect(
           `/dashboard/users/${userId}?notice=${encodeNotice(
             "Kunde inte radera kommentarreaktioner på användarens inlägg."
@@ -165,11 +165,11 @@ export async function deleteUserAction(formData) {
       }
     }
 
-    const { error: feedCommentsError } = await supabase
+    const { error: postCommentsError } = await supabase
       .from("comments")
       .delete()
-      .in("feedId", ownedFeedIds);
-    if (feedCommentsError) {
+      .in("post_id", ownedPostIds);
+    if (postCommentsError) {
       redirect(
         `/dashboard/users/${userId}?notice=${encodeNotice(
           "Kunde inte radera kommentarer på användarens inlägg."
@@ -177,8 +177,8 @@ export async function deleteUserAction(formData) {
       );
     }
 
-    const { error: feedLikesError } = await supabase.from("feedLikes").delete().in("feedId", ownedFeedIds);
-    if (feedLikesError) {
+    const { error: reactionsError } = await supabase.from("reactions").delete().in("post_id", ownedPostIds);
+    if (reactionsError) {
       redirect(
         `/dashboard/users/${userId}?notice=${encodeNotice(
           "Kunde inte radera likes på användarens inlägg."
@@ -186,11 +186,11 @@ export async function deleteUserAction(formData) {
       );
     }
 
-    const { error: feedReportsError } = await supabase
+    const { error: postReportsError } = await supabase
       .from("post_reports")
       .delete()
-      .in("feed_id", ownedFeedIds);
-    if (feedReportsError) {
+      .in("post_id", ownedPostIds);
+    if (postReportsError) {
       redirect(
         `/dashboard/users/${userId}?notice=${encodeNotice(
           "Kunde inte radera rapporter på användarens inlägg."
@@ -202,15 +202,15 @@ export async function deleteUserAction(formData) {
   const { data: remainingUserComments } = await supabase
     .from("comments")
     .select("id")
-    .eq("userId", userId);
+    .eq("user_id", userId);
   const remainingUserCommentIds = (remainingUserComments ?? [])
     .map((comment) => comment.id)
     .filter(Boolean);
   if (remainingUserCommentIds.length > 0) {
     const { error: userCommentLikesError } = await supabase
-      .from("commentLikes")
+      .from("comment_likes")
       .delete()
-      .in("commentId", remainingUserCommentIds);
+      .in("comment_id", remainingUserCommentIds);
     if (userCommentLikesError) {
       redirect(
         `/dashboard/users/${userId}?notice=${encodeNotice(
@@ -221,9 +221,9 @@ export async function deleteUserAction(formData) {
   }
 
   const deletionQueries = [
-    supabase.from("commentLikes").delete().eq("userId", userId),
-    supabase.from("feedLikes").delete().eq("userId", userId),
-    supabase.from("comments").delete().eq("userId", userId),
+    supabase.from("comment_likes").delete().eq("user_id", userId),
+    supabase.from("reactions").delete().eq("user_id", userId),
+    supabase.from("comments").delete().eq("user_id", userId),
     supabase.from("post_reports").delete().eq("reporter_id", userId),
     supabase.from("post_reports").delete().eq("post_owner_id", userId),
     supabase.from("friendships").delete().eq("sender_id", userId),
@@ -235,7 +235,7 @@ export async function deleteUserAction(formData) {
     supabase.from("user_onboarding").delete().eq("user_id", userId),
     supabase.from("user_push_tokens").delete().eq("user_id", userId),
     supabase.from("loved_ones_photos").delete().eq("user_id", userId),
-    supabase.from("feeds").delete().eq("userid", userId),
+    supabase.from("posts").delete().eq("user_id", userId),
   ];
 
   for (const query of deletionQueries) {
@@ -255,7 +255,7 @@ export async function deleteUserAction(formData) {
   }
 
   const storageClient = createStorageAdminClient() ?? supabase;
-  const candidateFiles = [targetUser.avatar, lovedOnesPhoto?.image_path, ...ownedFeedFiles].filter(Boolean);
+  const candidateFiles = [targetUser.avatar, lovedOnesPhoto?.image_path, ...ownedPostFiles].filter(Boolean);
   await tryDeleteStorageObjects(storageClient, candidateFiles, userId);
 
   if (targetUser.auth_id) {
