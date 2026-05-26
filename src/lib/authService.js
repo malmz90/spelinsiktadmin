@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Check whether a given user ID exists in the admin_users table.
- * Pass the already-created supabase client to avoid redundant cookie reads.
  *
- * NOTE: This check is a convenience layer — always enforce access via
- * Supabase Row Level Security policies as the authoritative source of truth.
+ * Pass a service-role client so admin access checks keep working even when
+ * application RLS does not expose admin metadata to normal users.
  *
  * @param {import("@supabase/supabase-js").SupabaseClient} supabase
  * @param {string} userId
@@ -40,25 +40,29 @@ export async function requireAuthenticatedUser(supabase, redirectTo = "/login") 
 /**
  * Check whether a user has admin access.
  *
- * @param {import("@supabase/supabase-js").SupabaseClient} supabase
  * @param {string} userId
+ * @param {{ adminSupabase?: import("@supabase/supabase-js").SupabaseClient }} options
  */
-export async function hasAdminAccess(supabase, userId) {
-  return isAdmin(supabase, userId);
+export async function hasAdminAccess(userId, { adminSupabase } = {}) {
+  return isAdmin(adminSupabase ?? createAdminClient(), userId);
 }
 
 /**
  * Require authenticated + admin user, otherwise redirect.
  *
  * @param {import("@supabase/supabase-js").SupabaseClient} supabase
- * @param {{ loginRedirect?: string; notAdminRedirect?: string }} options
+ * @param {{ loginRedirect?: string; notAdminRedirect?: string; adminSupabase?: import("@supabase/supabase-js").SupabaseClient }} options
  */
 export async function requireAdminUser(
   supabase,
-  { loginRedirect = "/login", notAdminRedirect = "/dashboard" } = {}
+  {
+    loginRedirect = "/login",
+    notAdminRedirect = "/dashboard",
+    adminSupabase,
+  } = {}
 ) {
   const user = await requireAuthenticatedUser(supabase, loginRedirect);
-  const admin = await hasAdminAccess(supabase, user.id);
+  const admin = await hasAdminAccess(user.id, { adminSupabase });
 
   if (!admin) redirect(notAdminRedirect);
   return user;

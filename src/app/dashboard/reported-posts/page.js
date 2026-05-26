@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import {
   REPORTED_POSTS_PAGE_SIZE,
@@ -134,9 +135,11 @@ function getReportStatus(report) {
 
 export default async function ReportedPostsPage({ searchParams }) {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const user = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/dashboard",
+    adminSupabase,
   });
 
   const { page: pageParam, notice, tone } = await searchParams;
@@ -151,7 +154,7 @@ export default async function ReportedPostsPage({ searchParams }) {
     canGoNext,
     shownFrom,
     shownTo,
-  } = await fetchReportedPostsPage(supabase, {
+  } = await fetchReportedPostsPage(adminSupabase, {
     page,
     pageSize: REPORTED_POSTS_PAGE_SIZE,
   });

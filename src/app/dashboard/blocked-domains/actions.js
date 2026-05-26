@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminUser } from "@/lib/authService";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   addNextDnsDenylistDomain,
   addNextDnsDenylistDomainsBulk,
@@ -16,10 +17,12 @@ function encodeNotice(message) {
 export async function addBlockedDomainAction(formData) {
   const rawValue = String(formData.get("domain") ?? "");
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
 
   await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
   let notice = "";
@@ -47,10 +50,12 @@ function buildBulkFailureNotice(failedDomains) {
 export async function addBlockedDomainsBulkAction(formData) {
   const rawValue = String(formData.get("domains") ?? "");
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
 
   await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
   let notice = "";

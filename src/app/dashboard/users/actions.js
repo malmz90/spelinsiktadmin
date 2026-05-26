@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminUser } from "@/lib/authService";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 function encodeNotice(message) {
@@ -12,16 +12,6 @@ function encodeNotice(message) {
 
 function isAbsoluteUrl(value) {
   return /^https?:\/\//i.test(value);
-}
-
-function createStorageAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) return null;
-
-  return createSupabaseClient(url, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 }
 
 function buildStorageCandidates(fileValue, userId) {
@@ -108,12 +98,14 @@ export async function deleteUserAction(formData) {
   }
 
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const adminUser = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
-  const { data: targetUser } = await supabase
+  const { data: targetUser } = await adminSupabase
     .from("users")
     .select("id, name, email, auth_id, avatar")
     .eq("id", userId)
@@ -137,22 +129,22 @@ export async function deleteUserAction(formData) {
   }
 
   const [{ data: ownedPosts }, { data: lovedOnesPhoto }] = await Promise.all([
-    supabase.from("posts").select("id, file").eq("user_id", userId),
-    supabase.from("loved_ones_photos").select("image_path").eq("user_id", userId).maybeSingle(),
+    adminSupabase.from("posts").select("id, file").eq("user_id", userId),
+    adminSupabase.from("loved_ones_photos").select("image_path").eq("user_id", userId).maybeSingle(),
   ]);
 
   const ownedPostIds = (ownedPosts ?? []).map((post) => post.id).filter(Boolean);
   const ownedPostFiles = (ownedPosts ?? []).map((post) => post.file).filter(Boolean);
 
   if (ownedPostIds.length > 0) {
-    const { data: postComments } = await supabase
+    const { data: postComments } = await adminSupabase
       .from("comments")
       .select("id")
       .in("post_id", ownedPostIds);
     const postCommentIds = (postComments ?? []).map((comment) => comment.id).filter(Boolean);
 
     if (postCommentIds.length > 0) {
-      const { error: postCommentLikesError } = await supabase
+      const { error: postCommentLikesError } = await adminSupabase
         .from("comment_likes")
         .delete()
         .in("comment_id", postCommentIds);
@@ -165,7 +157,7 @@ export async function deleteUserAction(formData) {
       }
     }
 
-    const { error: postCommentsError } = await supabase
+    const { error: postCommentsError } = await adminSupabase
       .from("comments")
       .delete()
       .in("post_id", ownedPostIds);
@@ -177,7 +169,7 @@ export async function deleteUserAction(formData) {
       );
     }
 
-    const { error: reactionsError } = await supabase.from("reactions").delete().in("post_id", ownedPostIds);
+    const { error: reactionsError } = await adminSupabase.from("reactions").delete().in("post_id", ownedPostIds);
     if (reactionsError) {
       redirect(
         `/dashboard/users/${userId}?notice=${encodeNotice(
@@ -186,7 +178,7 @@ export async function deleteUserAction(formData) {
       );
     }
 
-    const { error: postReportsError } = await supabase
+    const { error: postReportsError } = await adminSupabase
       .from("post_reports")
       .delete()
       .in("post_id", ownedPostIds);
@@ -199,7 +191,7 @@ export async function deleteUserAction(formData) {
     }
   }
 
-  const { data: remainingUserComments } = await supabase
+  const { data: remainingUserComments } = await adminSupabase
     .from("comments")
     .select("id")
     .eq("user_id", userId);
@@ -207,7 +199,7 @@ export async function deleteUserAction(formData) {
     .map((comment) => comment.id)
     .filter(Boolean);
   if (remainingUserCommentIds.length > 0) {
-    const { error: userCommentLikesError } = await supabase
+    const { error: userCommentLikesError } = await adminSupabase
       .from("comment_likes")
       .delete()
       .in("comment_id", remainingUserCommentIds);
@@ -221,21 +213,21 @@ export async function deleteUserAction(formData) {
   }
 
   const deletionQueries = [
-    supabase.from("comment_likes").delete().eq("user_id", userId),
-    supabase.from("reactions").delete().eq("user_id", userId),
-    supabase.from("comments").delete().eq("user_id", userId),
-    supabase.from("post_reports").delete().eq("reporter_id", userId),
-    supabase.from("post_reports").delete().eq("post_owner_id", userId),
-    supabase.from("friendships").delete().eq("sender_id", userId),
-    supabase.from("friendships").delete().eq("receiver_id", userId),
-    supabase.from("sponsorships").delete().eq("sponsor_id", userId),
-    supabase.from("sponsorships").delete().eq("gambler_id", userId),
-    supabase.from("notifications").delete().eq("user_id", userId),
-    supabase.from("user_feelings").delete().eq("user_id", userId),
-    supabase.from("user_onboarding").delete().eq("user_id", userId),
-    supabase.from("user_push_tokens").delete().eq("user_id", userId),
-    supabase.from("loved_ones_photos").delete().eq("user_id", userId),
-    supabase.from("posts").delete().eq("user_id", userId),
+    adminSupabase.from("comment_likes").delete().eq("user_id", userId),
+    adminSupabase.from("reactions").delete().eq("user_id", userId),
+    adminSupabase.from("comments").delete().eq("user_id", userId),
+    adminSupabase.from("post_reports").delete().eq("reporter_id", userId),
+    adminSupabase.from("post_reports").delete().eq("post_owner_id", userId),
+    adminSupabase.from("friendships").delete().eq("sender_id", userId),
+    adminSupabase.from("friendships").delete().eq("receiver_id", userId),
+    adminSupabase.from("sponsorships").delete().eq("sponsor_id", userId),
+    adminSupabase.from("sponsorships").delete().eq("gambler_id", userId),
+    adminSupabase.from("notifications").delete().eq("user_id", userId),
+    adminSupabase.from("user_feelings").delete().eq("user_id", userId),
+    adminSupabase.from("user_onboarding").delete().eq("user_id", userId),
+    adminSupabase.from("user_push_tokens").delete().eq("user_id", userId),
+    adminSupabase.from("loved_ones_photos").delete().eq("user_id", userId),
+    adminSupabase.from("posts").delete().eq("user_id", userId),
   ];
 
   for (const query of deletionQueries) {
@@ -249,21 +241,17 @@ export async function deleteUserAction(formData) {
     }
   }
 
-  const { error: userDeleteError } = await supabase.from("users").delete().eq("id", userId);
+  const { error: userDeleteError } = await adminSupabase.from("users").delete().eq("id", userId);
   if (userDeleteError) {
     redirect(`/dashboard/users/${userId}?notice=${encodeNotice("Kunde inte radera användaren.")}&tone=error`);
   }
 
-  const storageClient = createStorageAdminClient() ?? supabase;
   const candidateFiles = [targetUser.avatar, lovedOnesPhoto?.image_path, ...ownedPostFiles].filter(Boolean);
-  await tryDeleteStorageObjects(storageClient, candidateFiles, userId);
+  await tryDeleteStorageObjects(adminSupabase, candidateFiles, userId);
 
   if (targetUser.auth_id) {
-    const adminClient = createStorageAdminClient();
-    if (adminClient) {
-      await adminClient.from("admin_users").delete().eq("user_id", targetUser.auth_id);
-      await adminClient.auth.admin.deleteUser(targetUser.auth_id);
-    }
+    await adminSupabase.from("admin_users").delete().eq("user_id", targetUser.auth_id);
+    await adminSupabase.auth.admin.deleteUser(targetUser.auth_id);
   }
 
   revalidatePath("/dashboard/users");

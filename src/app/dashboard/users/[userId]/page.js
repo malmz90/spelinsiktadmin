@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import AppText from "@/components/AppText";
@@ -83,9 +84,11 @@ function StatPill({ label, value }) {
 
 export default async function UserReviewPage({ params, searchParams }) {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const admin = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
   const { userId } = await params;
@@ -106,7 +109,7 @@ export default async function UserReviewPage({ params, searchParams }) {
     onboarding,
     pushToken,
     error,
-  } = await fetchUserModerationDetail(supabase, { userId });
+  } = await fetchUserModerationDetail(adminSupabase, { userId });
 
   const noticeColor = tone === "error" ? COLORS.error : COLORS.primary;
   const expectedDeleteToken = user?.name?.trim() || user?.email?.trim() || user?.id || "";

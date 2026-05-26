@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import { USERS_PAGE_SIZE, fetchUsersPage } from "@/lib/usersService";
 import DashboardSidebar from "@/components/DashboardSidebar";
@@ -128,9 +129,11 @@ function formatDate(iso) {
 
 export default async function UsersPage({ searchParams }) {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const user = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/dashboard",
+    adminSupabase,
   });
 
   const { q, page: pageParam, notice, tone } = await searchParams;
@@ -146,7 +149,7 @@ export default async function UsersPage({ searchParams }) {
     canGoNext,
     shownFrom,
     shownTo,
-  } = await fetchUsersPage(supabase, {
+  } = await fetchUsersPage(adminSupabase, {
     search,
     page,
     pageSize: USERS_PAGE_SIZE,

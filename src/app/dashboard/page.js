@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import { fetchSavingsStats } from "@/lib/usersService";
 import DashboardSidebar from "@/components/DashboardSidebar";
@@ -25,9 +26,11 @@ function formatSEK(amount) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const user = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
   const [
@@ -35,9 +38,9 @@ export default async function DashboardPage() {
     { count: reportedPostsCount },
     savings,
   ] = await Promise.all([
-    supabase.from("users").select("id", { count: "exact", head: true }),
-    supabase.from("post_reports").select("id", { count: "exact", head: true }),
-    fetchSavingsStats(supabase),
+    adminSupabase.from("users").select("id", { count: "exact", head: true }),
+    adminSupabase.from("post_reports").select("id", { count: "exact", head: true }),
+    fetchSavingsStats(adminSupabase),
   ]);
 
   const stats = [

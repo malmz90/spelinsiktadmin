@@ -1,9 +1,9 @@
 "use server";
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminUser } from "@/lib/authService";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 function encodeNotice(message) {
@@ -18,16 +18,6 @@ function buildDetailHref(reportId, notice, tone = "success") {
 
 function isAbsoluteUrl(value) {
   return /^https?:\/\//i.test(value);
-}
-
-function createStorageAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRoleKey) return null;
-
-  return createSupabaseClient(url, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 }
 
 function buildStorageCandidates(fileValue, userId) {
@@ -104,26 +94,28 @@ export async function deleteReportedFeedAction(formData) {
   }
 
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/dashboard",
+    adminSupabase,
   });
 
-  const { data: post } = await supabase
+  const { data: post } = await adminSupabase
     .from("posts")
     .select("file, user_id")
     .eq("id", postId)
     .maybeSingle();
   const storageCandidates = buildStorageCandidates(post?.file, post?.user_id);
 
-  const { data: comments } = await supabase
+  const { data: comments } = await adminSupabase
     .from("comments")
     .select("id")
     .eq("post_id", postId);
 
   const commentIds = (comments ?? []).map((comment) => comment.id).filter(Boolean);
   if (commentIds.length > 0) {
-    const { error: commentLikesError } = await supabase
+    const { error: commentLikesError } = await adminSupabase
       .from("comment_likes")
       .delete()
       .in("comment_id", commentIds);
@@ -132,37 +124,36 @@ export async function deleteReportedFeedAction(formData) {
     }
   }
 
-  const { error: commentsError } = await supabase.from("comments").delete().eq("post_id", postId);
+  const { error: commentsError } = await adminSupabase.from("comments").delete().eq("post_id", postId);
   if (commentsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera kommentarer.", "error"));
   }
 
-  const { error: reactionsError } = await supabase.from("reactions").delete().eq("post_id", postId);
+  const { error: reactionsError } = await adminSupabase.from("reactions").delete().eq("post_id", postId);
   if (reactionsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera likes.", "error"));
   }
 
-  const { error: reportsError } = await supabase.from("post_reports").delete().eq("post_id", postId);
+  const { error: reportsError } = await adminSupabase.from("post_reports").delete().eq("post_id", postId);
   if (reportsError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera rapporter.", "error"));
   }
 
-  const { error: postError } = await supabase.from("posts").delete().eq("id", postId);
+  const { error: postError } = await adminSupabase.from("posts").delete().eq("id", postId);
   if (postError) {
     redirect(buildDetailHref(reportId, "Kunde inte radera inlägget.", "error"));
   }
 
   if (storageCandidates.length > 0) {
-    const storageClient = createStorageAdminClient() ?? supabase;
     let deletedAnyImage = false;
 
     for (const candidate of storageCandidates) {
-      const { data: probeData, error: probeError } = await storageClient.storage
+      const { data: probeData, error: probeError } = await adminSupabase.storage
         .from(candidate.bucket)
         .download(candidate.path);
       if (probeError || !probeData) continue;
 
-      const { error: storageDeleteError } = await storageClient.storage
+      const { error: storageDeleteError } = await adminSupabase.storage
         .from(candidate.bucket)
         .remove([candidate.path]);
       if (!storageDeleteError) {

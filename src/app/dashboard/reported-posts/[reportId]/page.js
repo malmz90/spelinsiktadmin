@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import AppText from "@/components/AppText";
@@ -186,9 +187,11 @@ function SectionCard({ title, children, subtitle }) {
 
 export default async function ReportedPostDetailPage({ params, searchParams }) {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const user = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/dashboard",
+    adminSupabase,
   });
 
   const { reportId } = await params;
@@ -201,8 +204,8 @@ export default async function ReportedPostDetailPage({ params, searchParams }) {
     totalPostReactions,
     totalCommentLikes,
     error,
-  } = await fetchReportedPostDetail(supabase, { reportId });
-  const imageUrl = await resolveImageUrl(supabase, report?.post?.file);
+  } = await fetchReportedPostDetail(adminSupabase, { reportId });
+  const imageUrl = await resolveImageUrl(adminSupabase, report?.post?.file);
 
   const noticeColor = tone === "error" ? COLORS.error : COLORS.primary;
 

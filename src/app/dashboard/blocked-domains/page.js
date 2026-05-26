@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdminUser } from "@/lib/authService";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import AppText from "@/components/AppText";
@@ -15,9 +16,11 @@ const LOCAL_PAGE_SIZE = 10;
 
 export default async function BlockedDomainsPage({ searchParams }) {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const user = await requireAdminUser(supabase, {
     loginRedirect: "/login",
     notAdminRedirect: "/login",
+    adminSupabase,
   });
 
   const { notice, tone, cursor: cursorParam, page: pageParam } = await searchParams;
@@ -122,7 +125,7 @@ export default async function BlockedDomainsPage({ searchParams }) {
             Blockera domän
           </AppText>
           <AppText variant="caption" style={{ opacity: 0.55, marginBottom: SPACING.x6, display: "block" }}>
-            Lägg till en domän direkt eller använd "Bulk blockera" för flera URL:er samtidigt.
+            Lägg till en domän direkt eller använd &quot;Bulk blockera&quot; för flera URL:er samtidigt.
           </AppText>
           <AddBlockedDomainForm />
         </div>
